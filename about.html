@@ -118,8 +118,7 @@
         "@type": "Person",
         "name": "柴田 昌国",
         "jobTitle": "代表取締役CEO",
-        "description": "AIスタートアップ企業「ShinAI」創業者。真の価値を信じ、次世代のために人とAIの共創社会の実現に情熱を注ぐ。",
-        "image": "assets/images/ceo-masakuni-shibata.png"
+        "description": "AIスタートアップ企業「ShinAI」創業者。真の価値を信じ、次世代のために人とAIの共創社会の実現に情熱を注ぐ。"
       },
       "address": {
         "@type": "PostalAddress",
@@ -207,8 +206,7 @@
           "worksFor": {
             "@type": "Organization",
             "name": "ShinAI"
-          },
-          "image": "assets/images/ceo-masakuni-shibata.png"
+          }
         },
         {
           "@type": "Person", 
@@ -1602,7 +1600,7 @@
     }
 
     /* ========================================================
-    ▼ Team Section Component - 改善版・控えめマウスオーバー・CEO画像更新対応
+    ▼ Team Section Component - 改善版・控えめマウスオーバー
     ======================================================== */
     .team-section {
         position: relative;
@@ -1667,9 +1665,7 @@
         width: 100%;
         height: 100%;
         object-fit: cover;
-        object-position: center;
         transition: transform 0.5s ease;
-        border-radius: 50%;
     }
     
     .team-member:hover .team-member-photo img {
@@ -2595,23 +2591,8 @@
     }
 
     /* ========================================================
-    ▼ CEO Image Force Display Component - CEO画像強制表示
+    ▼ Chatbot Component - 改善版・モバイル最適化
     ======================================================== */
-    #ceo-image-main {
-        content: url('assets/images/ceo-masakuni-shibata.png') !important;
-        width: 150px !important;
-        height: 150px !important;
-        object-fit: cover !important;
-        object-position: center !important;
-        border-radius: 50% !important;
-        display: block !important;
-    }
-    
-    /* 外部画像URLを強制的に無効化 */
-    img[src*="unsplash.com"],
-    img[src*="images.unsplash.com"] {
-        display: none !important;
-    }
     .chatbot {
         position: fixed;
         bottom: 30px;
@@ -3209,12 +3190,11 @@
                 
                 <div class="company-about-grid animate-on-scroll">
                     <div class="company-image">
-                        <div style="width: 100%; height: 400px; background: linear-gradient(135deg, #3A5FEB 0%, #00C9A7 100%); border-radius: 15px; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.5rem; text-align: center; padding: 2rem;">
-                            <div>
-                                <i class="fas fa-lightbulb" style="font-size: 4rem; margin-bottom: 1rem; display: block;"></i>
-                                <p>AI技術で未来を創造<br><strong>ShinAI</strong></p>
-                            </div>
-                        </div>
+                        <img src="https://images.unsplash.com/photo-1543269865-cbf427effbad?auto=format&fit=crop&q=80&w=1200&h=900" 
+                            alt="チームワークを象徴する画像" 
+                            width="1200"
+                            height="900"
+                            loading="lazy">
                     </div>
                     <div>
                         <div class="company-message">
@@ -3402,7 +3382,7 @@
         </section>
         
         <!-- ========================================================
-        ▼ Team Section Component - 改善版・控えめマウスオーバー・CEO画像更新対応
+        ▼ Team Section Component - 改善版・控えめマウスオーバー
         ======================================================== -->
         <section class="team-section" id="team">
             <div class="container">
@@ -3413,26 +3393,32 @@
                 </div>
                 
                 <div class="team-grid animate-on-scroll">
-                    <!-- 柴田 昌国（代表取締役CEO）- ★シンプル確実パス★ -->
+                    <!-- 柴田 昌国（代表取締役） -->
                     <div class="team-member">
                         <div class="team-member-photo">
-                            <img src="assets/images/ceo-masakuni-shibata.png" alt="CEO 柴田昌国">
+                            <img src="assets/images/ceo-masakuni-shibata.png?v=2025" 
+                                alt="柴田 昌国" 
+                                width="150" 
+                                height="150"
+                                loading="lazy">
                         </div>
                         <h3 class="team-member-name">柴田 昌国</h3>
-                        <p class="team-member-position">代表取締役 / CEO</p>
-                        <p class="team-member-bio">AIスタートアップ企業「ShinAI」創業者。真の価値を信じ、次世代のために人とAIの共創社会の実現に情熱を注ぐ。AI技術を通じて、人々が本当に大切な時間を取り戻せる社会の実現を目指している。</p>
+                        <p class="team-member-position">代表 / CEO</p>
+                        <p class="team-member-bio">AIスタートアップ企業「ShinAI」創業者。真の価値を信じ、次世代のために人とAIの共創社会の実現に情熱を注ぐ。</p>
                         <div class="team-social-links">
                             <a href="#" class="team-social-link" aria-label="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
                             <a href="#" class="team-social-link" aria-label="Twitter"><i class="fab fa-twitter"></i></a>
                         </div>
                     </div>
                     
-                    <!-- Y氏（CTO）- ★プレースホルダー表示★ -->
+                    <!-- Y氏（CTO） -->
                     <div class="team-member">
                         <div class="team-member-photo">
-                            <div style="width: 150px; height: 150px; border-radius: 50%; background: linear-gradient(135deg, #3A5FEB, #00C9A7); display: flex; align-items: center; justify-content: center; color: white; font-size: 2rem; font-weight: bold;">
-                                Y
-                            </div>
+                            <img src="https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&q=80&w=150&h=150" 
+                                alt="Y氏" 
+                                width="150" 
+                                height="150"
+                                loading="lazy">
                         </div>
                         <h3 class="team-member-name">Y氏</h3>
                         <p class="team-member-position">最高技術責任者 / CTO</p>
@@ -3444,14 +3430,13 @@
                     </div>
                 </div>
                 
-                <!-- チーム全体の写真 - ★外部画像を削除してプレースホルダーに変更★ -->
+                <!-- チーム全体の写真 -->
                 <div class="team-photo animate-on-scroll">
-                    <div style="width: 100%; height: 350px; background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); border-radius: 15px; display: flex; align-items: center; justify-content: center; color: #64748b; font-size: 1.2rem; text-align: center; padding: 2rem;">
-                        <div>
-                            <i class="fas fa-users" style="font-size: 3rem; margin-bottom: 1rem; display: block;"></i>
-                            <p>ShinAIチーム集合写真<br><small>※準備中</small></p>
-                        </div>
-                    </div>
+                    <img src="https://images.unsplash.com/photo-1600880292203-757bb62b4baf?auto=format&fit=crop&q=80&w=1200&h=550" 
+                        alt="ShinAIチームの集合写真" 
+                        width="1200"
+                        height="550"
+                        loading="lazy">
                 </div>
             </div>
         </section>
@@ -3746,95 +3731,6 @@
             const currentYear = new Date().getFullYear();
             currentYearElement.textContent = currentYear;
         }
-        
-        // ========================================================
-        // ▼ CEO Image Path Debug & Force Load Component - パス確認・強制表示
-        // ========================================================
-        
-        // ページ読み込み完了時にCEO画像を強制設定
-        window.addEventListener('load', function() {
-            console.log('=== CEO画像デバッグ開始 ===');
-            
-            // 可能な全てのCEO画像要素を取得
-            const ceoSelectors = [
-                'img[alt*="柴田"]',
-                'img[src*="ceo"]',
-                'img[src*="masakuni"]',
-                'img[src*="shibata"]'
-            ];
-            
-            let ceoImages = [];
-            ceoSelectors.forEach(selector => {
-                const elements = document.querySelectorAll(selector);
-                elements.forEach(el => {
-                    if (!ceoImages.includes(el)) {
-                        ceoImages.push(el);
-                    }
-                });
-            });
-            
-            console.log('発見されたCEO画像要素数:', ceoImages.length);
-            
-            // 各画像要素に対してパス設定
-            ceoImages.forEach((img, index) => {
-                console.log(`CEO画像 ${index + 1}:`, img);
-                console.log('現在のsrc:', img.src);
-                console.log('現在のalt:', img.alt);
-                
-                // 複数のパスパターンを試行
-                const possiblePaths = [
-                    'assets/images/ceo-masakuni-shibata.png',
-                    './assets/images/ceo-masakuni-shibata.png',
-                    '../assets/images/ceo-masakuni-shibata.png',
-                    'images/ceo-masakuni-shibata.png',
-                    'ceo-masakuni-shibata.png'
-                ];
-                
-                let pathIndex = 0;
-                
-                function tryNextPath() {
-                    if (pathIndex < possiblePaths.length) {
-                        const testPath = possiblePaths[pathIndex];
-                        console.log(`パス試行 ${pathIndex + 1}: ${testPath}`);
-                        
-                        // 新しい画像オブジェクトでテスト
-                        const testImg = new Image();
-                        testImg.onload = function() {
-                            console.log(`✅ 成功: ${testPath} が読み込めました`);
-                            img.src = testPath;
-                            img.style.display = 'block';
-                        };
-                        testImg.onerror = function() {
-                            console.log(`❌ 失敗: ${testPath} が読み込めませんでした`);
-                            pathIndex++;
-                            tryNextPath();
-                        };
-                        testImg.src = testPath;
-                    } else {
-                        console.log('❌ 全てのパスが失敗しました。フォールバック処理を実行します。');
-                        // フォールバック: イニシャル表示
-                        img.style.display = 'none';
-                        const placeholder = document.createElement('div');
-                        placeholder.style.cssText = 'width: 150px; height: 150px; border-radius: 50%; background: linear-gradient(135deg, #3A5FEB, #00C9A7); display: flex; align-items: center; justify-content: center; color: white; font-size: 2rem; font-weight: bold; margin: 0 auto;';
-                        placeholder.textContent = '柴田';
-                        img.parentNode.insertBefore(placeholder, img);
-                    }
-                }
-                
-                // パス試行開始
-                tryNextPath();
-            });
-            
-            // さらに、チーム全体の画像も確認
-            const teamImages = document.querySelectorAll('.team-member img');
-            console.log('チーム画像総数:', teamImages.length);
-            teamImages.forEach((img, index) => {
-                console.log(`チーム画像 ${index + 1} src:`, img.src);
-                console.log(`チーム画像 ${index + 1} alt:`, img.alt);
-            });
-            
-            console.log('=== CEO画像デバッグ終了 ===');
-        });
         
         // ========================================================
         // ▼ Perfect Responsive Header & Navigation Component - 改善版・PC/モバイル完全対応
