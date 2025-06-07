@@ -121,7 +121,7 @@
         "description": "AIスタートアップ企業「ShinAI」創業者。真の価値を信じ、次世代のために人とAIの共創社会の実現に情熱を注ぐ。",
         "image": {
           "@type": "ImageObject",
-          "url": "/assets/images/ceo-masakuni-shibata.png",
+          "url": "assets/images/ceo-masakuni-shibata.png",
           "width": 150,
           "height": 150
         }
@@ -215,7 +215,7 @@
           },
           "image": {
             "@type": "ImageObject",
-            "url": "/assets/images/ceo-masakuni-shibata.png",
+            "url": "assets/images/ceo-masakuni-shibata.png",
             "width": 150,
             "height": 150
           }
@@ -2605,26 +2605,22 @@
     }
 
     /* ========================================================
-    ▼ CEO Image Absolute Force Display - CEO画像絶対強制表示
+    ▼ CEO Image Force Display Component - CEO画像強制表示
     ======================================================== */
-    .team-member-photo img[alt*="柴田"],
-    .team-member-photo img[src*="ceo-masakuni-shibata"] {
+    #ceo-image-main {
         content: url('assets/images/ceo-masakuni-shibata.png') !important;
         width: 150px !important;
         height: 150px !important;
         object-fit: cover !important;
+        object-position: center !important;
         border-radius: 50% !important;
         display: block !important;
-        margin: 0 auto !important;
     }
     
-    /* 外部画像を完全に無効化 */
-    img[src*="unsplash"],
-    img[src*="images.unsplash.com"],
-    img[src*="photo-1568602471122"] {
+    /* 外部画像URLを強制的に無効化 */
+    img[src*="unsplash.com"],
+    img[src*="images.unsplash.com"] {
         display: none !important;
-        opacity: 0 !important;
-        visibility: hidden !important;
     }
     .chatbot {
         position: fixed;
@@ -3416,7 +3412,7 @@
         </section>
         
         <!-- ========================================================
-        ▼ Team Section Component - 完全新規作成・CEO画像確実表示
+        ▼ Team Section Component - 改善版・控えめマウスオーバー・CEO画像更新対応
         ======================================================== -->
         <section class="team-section" id="team">
             <div class="container">
@@ -3426,29 +3422,22 @@
                     <p class="section-description">専門知識と実績を持つプロフェッショナルが、お客様の課題解決に取り組みます</p>
                 </div>
                 
-                <!-- チームメンバーグリッド - 完全新規作成 -->
                 <div class="team-grid animate-on-scroll">
-                    <!-- 柴田昌国CEO - 完全新規HTML -->
+                    <!-- 柴田 昌国（代表取締役CEO）- ★正しい相対パスで確実表示★ -->
                     <div class="team-member">
                         <div class="team-member-photo">
-                            <!-- 絶対確実なCEO画像表示 -->
-                            <img src="assets/images/ceo-masakuni-shibata.png" 
-                                 alt="柴田昌国" 
-                                 width="150" 
-                                 height="150"
-                                 style="width: 150px; height: 150px; object-fit: cover; border-radius: 50%; display: block;"
-                                 loading="eager">
+                            <img src="assets/images/ceo-masakuni-shibata.png" alt="CEO 柴田昌国" width="150" height="150">
                         </div>
                         <h3 class="team-member-name">柴田 昌国</h3>
                         <p class="team-member-position">代表取締役 / CEO</p>
-                        <p class="team-member-bio">AIスタートアップ企業「ShinAI」創業者。真の価値を信じ、次世代のために人とAIの共創社会の実現に情熱を注ぐ。</p>
+                        <p class="team-member-bio">AIスタートアップ企業「ShinAI」創業者。真の価値を信じ、次世代のために人とAIの共創社会の実現に情熱を注ぐ。AI技術を通じて、人々が本当に大切な時間を取り戻せる社会の実現を目指している。</p>
                         <div class="team-social-links">
                             <a href="#" class="team-social-link" aria-label="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
                             <a href="#" class="team-social-link" aria-label="Twitter"><i class="fab fa-twitter"></i></a>
                         </div>
                     </div>
                     
-                    <!-- Y氏CTO -->
+                    <!-- Y氏（CTO）- ★プレースホルダー表示★ -->
                     <div class="team-member">
                         <div class="team-member-photo">
                             <div style="width: 150px; height: 150px; border-radius: 50%; background: linear-gradient(135deg, #3A5FEB, #00C9A7); display: flex; align-items: center; justify-content: center; color: white; font-size: 2rem; font-weight: bold;">
@@ -3465,7 +3454,7 @@
                     </div>
                 </div>
                 
-                <!-- チーム全体写真プレースホルダー -->
+                <!-- チーム全体の写真 - ★外部画像を削除してプレースホルダーに変更★ -->
                 <div class="team-photo animate-on-scroll">
                     <div style="width: 100%; height: 350px; background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); border-radius: 15px; display: flex; align-items: center; justify-content: center; color: #64748b; font-size: 1.2rem; text-align: center; padding: 2rem;">
                         <div>
