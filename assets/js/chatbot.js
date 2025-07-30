@@ -2,6 +2,7 @@
  * ==============================================
  * // === component-split: ChatbotModule ===
  * COMPONENT: インタラクティブAIチャットボット
+ * Vercel Serverless Function統合版
  * ==============================================
  */
 const ChatbotModule = {
@@ -12,8 +13,20 @@ const ChatbotModule = {
     input: null,
     submitBtn: null,
     isTyping: false,
-    apiKey: '', // OpenAI APIキーを設定
-    apiUrl: 'https://api.openai.com/v1/chat/completions',
+    // セキュアAPI設定（Vercel Serverless Function）
+    apiUrl: '/api/chat',
+    // 不正利用防止設定
+    maxMessageLength: 1000,
+    lastMessageTime: 0,
+    messageCount: 0,
+    rateLimitWindow: 60000, // 1分
+    // 使用量監視
+    usageStats: {
+        dailyUsed: 0,
+        monthlyUsed: 0,
+        dailyLimit: 100,
+        monthlyLimit: 1000
+    },
     defaultResponses: [
         "AIチャットボットについての詳細は、お問い合わせフォームよりお気軽にご連絡ください。",
         "AI導入についてのご相談は、専門のコンサルタントが対応いたします。無料相談フォームからお問い合わせください。",
@@ -48,12 +61,12 @@ const ChatbotModule = {
 応答の際は、上記情報に基づいた正確な内容を提供し、詳細な相談は無料相談フォームへの誘導を行ってください。300文字以内の簡潔な返答を心がけてください。`,
     
     init: function() {
-        this.toggle = document.getElementById('chatbot-toggle');
-        this.container = document.getElementById('chatbot-container');
+        this.toggle = document.getElementById('chatbot-button');
+        this.container = document.getElementById('chatbot-window');
         this.closeBtn = document.getElementById('chatbot-close');
         this.messages = document.getElementById('chatbot-messages');
-        this.input = document.getElementById('chatbot-input-text');
-        this.submitBtn = document.getElementById('chatbot-submit');
+        this.input = document.getElementById('chat-input');
+        this.submitBtn = document.getElementById('chat-send');
         
         if (!this.toggle || !this.container) return;
         
@@ -76,14 +89,29 @@ const ChatbotModule = {
             }
         }, 30000);
         
-        // APIキーの設定
-        this.fetchApiKey();
+        // 使用量統計の初期化
+        this.initUsageStats();
     },
     
-    fetchApiKey: function() {
-        // 本番環境ではサーバーサイドで管理するか、安全な方法で取得する
-        // テスト環境ではローカルストレージから取得
-        this.apiKey = localStorage.getItem('shinai_chatbot_api_key') || '';
+    initUsageStats: function() {
+        // ローカルストレージから使用量統計を取得（クライアント側での概算）
+        const today = new Date().toDateString();
+        const thisMonth = new Date().toISOString().substring(0, 7);
+        
+        const storedStats = localStorage.getItem('shinai_chatbot_usage');
+        if (storedStats) {
+            try {
+                const parsed = JSON.parse(storedStats);
+                if (parsed.date === today) {
+                    this.usageStats.dailyUsed = parsed.dailyUsed || 0;
+                }
+                if (parsed.month === thisMonth) {
+                    this.usageStats.monthlyUsed = parsed.monthlyUsed || 0;
+                }
+            } catch (e) {
+                console.warn('Failed to parse usage stats:', e);
+            }
+        }
     },
     
     toggleChat: function() {
@@ -92,7 +120,8 @@ const ChatbotModule = {
         
         if (isOpen) {
             this.input.focus();
-            this.announceToScreenReaders('チャットボットが開きました');
+            // スクリーンリーダー用のアナウンスを削除（視覚的表示を避けるため）
+            // this.announceToScreenReaders('チャットボットが開きました');
             
             // 既存のプロアクティブプロンプトを削除
             const proactivePrompt = document.querySelector('.chatbot-proactive');
@@ -105,75 +134,119 @@ const ChatbotModule = {
     closeChat: function() {
         this.container.classList.remove('active');
         this.toggle.setAttribute('aria-expanded', false);
-        this.announceToScreenReaders('チャットボットが閉じました');
+        // スクリーンリーダー用のアナウンスを削除（視覚的表示を避けるため）
+        // this.announceToScreenReaders('チャットボットが閉じました');
     },
     
     sendMessage: async function() {
         const text = this.input.value.trim();
         if (!text || this.isTyping) return;
         
+        // メッセージサイズ制限チェック
+        if (text.length > this.maxMessageLength) {
+            this.showErrorMessage(`メッセージが長すぎます。${this.maxMessageLength}文字以内で入力してください。（現在: ${text.length}文字）`);
+            return;
+        }
+        
+        // レート制限チェック
+        const now = Date.now();
+        if (now - this.lastMessageTime < 3000) { // 3秒間隔制限
+            this.showErrorMessage('メッセージの送信間隔が短すぎます。少し待ってからお試しください。');
+            return;
+        }
+        
+        // 使用量制限チェック（クライアント側概算）
+        if (this.usageStats.dailyUsed >= this.usageStats.dailyLimit) {
+            this.showErrorMessage(`本日の利用上限（${this.usageStats.dailyLimit}回）に達しました。明日再度お試しください。詳しくはお問い合わせフォームからご連絡ください。`);
+            return;
+        }
+        
         // ユーザーメッセージを追加
         this.addMessage(text, 'user');
         this.input.value = '';
+        this.lastMessageTime = now;
         
         // 入力中表示
         this.showTypingIndicator();
         
         try {
-            // APIキーがある場合はAPIを利用、なければフォールバック
-            let response;
-            if (this.apiKey) {
-                response = await this.callOpenAI(text);
-            } else {
-                // フォールバック応答
-                response = this.getLocalResponse(text);
-            }
+            // セキュアAPIエンドポイント経由でOpenAI API呼び出し
+            const response = await this.callSecureAPI(text);
             
             // 入力中表示を非表示
             this.hideTypingIndicator();
             
             // AIレスポンスを追加
-            this.addMessage(response, 'bot');
+            this.addMessage(response.message, 'bot');
+            
+            // 使用量統計更新
+            if (response.usage) {
+                this.updateUsageStats(response.usage);
+            }
+            
+            // フォールバック表示の場合は警告を表示
+            if (response.fallback) {
+                this.showWarningMessage('APIサービスが一時的に利用できません。基本的な応答を表示しています。');
+            }
             
             // スクロールを最下部へ
             this.scrollToBottom();
         } catch (error) {
             console.error('Error generating response:', error);
             this.hideTypingIndicator();
-            this.addMessage("申し訳ありません。正常に応答できませんでした。しばらく経ってからお試しいただくか、お問い合わせフォームよりご連絡ください。", 'bot');
+            
+            // エラーの種類に応じた適切な応答
+            if (error.status === 429) {
+                this.addMessage("利用上限に達しました。しばらく待ってからお試しいただくか、お問い合わせフォームよりご連絡ください。", 'bot');
+            } else if (error.status === 503) {
+                this.addMessage("チャットボットサービスが一時的に利用できません。お問い合わせフォームよりご連絡ください。", 'bot');
+            } else {
+                // フォールバック応答
+                const fallbackResponse = this.getLocalResponse(text);
+                this.addMessage(fallbackResponse, 'bot');
+                this.showWarningMessage('ネットワークエラーが発生しました。基本的な応答を表示しています。');
+            }
+            
             this.scrollToBottom();
         }
     },
     
-    callOpenAI: async function(userMessage) {
+    callSecureAPI: async function(userMessage) {
         try {
             const response = await fetch(this.apiUrl, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${this.apiKey}`
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    model: 'gpt-3.5-turbo',
-                    messages: [
-                        { role: 'system', content: this.systemPrompt },
-                        { role: 'user', content: userMessage }
-                    ],
-                    max_tokens: 300,
-                    temperature: 0.7
+                    message: userMessage
                 })
             });
             
             if (!response.ok) {
-                throw new Error(`API request failed with status ${response.status}`);
+                const error = new Error(`API request failed with status ${response.status}`);
+                error.status = response.status;
+                
+                // サーバーからのエラーメッセージを取得
+                try {
+                    const errorData = await response.json();
+                    error.message = errorData.error || error.message;
+                } catch (e) {
+                    // JSON解析に失敗した場合はデフォルトメッセージを使用
+                }
+                
+                throw error;
             }
             
             const data = await response.json();
-            return data.choices[0].message.content.trim();
+            return {
+                message: data.response,
+                usage: data.usage,
+                fallback: data.fallback || false
+            };
         } catch (error) {
-            console.error('OpenAI API error:', error);
-            // APIエラー時にフォールバック応答を返す
-            return this.getLocalResponse(userMessage);
+            console.error('Secure API error:', error);
+            throw error;
         }
     },
     
@@ -211,7 +284,7 @@ const ChatbotModule = {
     
     addMessage: function(text, type) {
         const message = document.createElement('div');
-        message.classList.add('message', `${type}-message`);
+        message.classList.add('chat-message', type);
         message.textContent = text;
         
         if (type === 'bot') {
@@ -313,6 +386,76 @@ const ChatbotModule = {
         }
         
         ariaLive.textContent = message;
+    },
+    
+    // 新機能: エラーメッセージ表示
+    showErrorMessage: function(message) {
+        const errorMessage = document.createElement('div');
+        errorMessage.classList.add('chat-message', 'error-message');
+        errorMessage.innerHTML = `<i class="fas fa-exclamation-triangle" aria-hidden="true"></i> ${message}`;
+        errorMessage.setAttribute('role', 'alert');
+        
+        this.messages.appendChild(errorMessage);
+        this.scrollToBottom();
+        
+        // 10秒後に自動削除
+        setTimeout(() => {
+            if (errorMessage.parentNode) {
+                errorMessage.remove();
+            }
+        }, 10000);
+    },
+    
+    // 新機能: 警告メッセージ表示
+    showWarningMessage: function(message) {
+        const warningMessage = document.createElement('div');
+        warningMessage.classList.add('chat-message', 'warning-message');
+        warningMessage.innerHTML = `<i class="fas fa-exclamation-circle" aria-hidden="true"></i> ${message}`;
+        warningMessage.setAttribute('role', 'status');
+        
+        this.messages.appendChild(warningMessage);
+        this.scrollToBottom();
+        
+        // 8秒後に自動削除
+        setTimeout(() => {
+            if (warningMessage.parentNode) {
+                warningMessage.remove();
+            }
+        }, 8000);
+    },
+    
+    // 新機能: 使用量統計更新
+    updateUsageStats: function(usage) {
+        if (usage) {
+            this.usageStats.dailyUsed = usage.dailyUsed;
+            this.usageStats.monthlyUsed = usage.monthlyUsed;
+            this.usageStats.dailyLimit = usage.dailyLimit;
+            this.usageStats.monthlyLimit = usage.monthlyLimit;
+            
+            // ローカルストレージに保存（概算用）
+            const today = new Date().toDateString();
+            const thisMonth = new Date().toISOString().substring(0, 7);
+            
+            const statsToStore = {
+                date: today,
+                month: thisMonth,
+                dailyUsed: usage.dailyUsed,
+                monthlyUsed: usage.monthlyUsed
+            };
+            
+            try {
+                localStorage.setItem('shinai_chatbot_usage', JSON.stringify(statsToStore));
+            } catch (e) {
+                console.warn('Failed to store usage stats:', e);
+            }
+            
+            // 使用量が上限に近い場合は警告表示
+            if (usage.dailyUsed >= usage.dailyLimit * 0.8) {
+                this.showWarningMessage(`本日の利用回数が上限の80%（${usage.dailyUsed}/${usage.dailyLimit}）に達しました。`);
+            } else if (usage.monthlyUsed >= usage.monthlyLimit * 0.8) {
+                this.showWarningMessage(`今月の利用回数が上限の80%（${usage.monthlyUsed}/${usage.monthlyLimit}）に達しました。`);
+            }
+        }
     }
 };
 
