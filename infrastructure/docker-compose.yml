@@ -1,0 +1,360 @@
+version: '3.8'
+
+services:
+  # フロントエンド（Nginx + 静的ファイル）
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+      args:
+        NODE_ENV: production
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/ssl/private:ro
+      - ../frontend/public:/usr/share/nginx/html:ro
+      - nginx_logs:/var/log/nginx
+    depends_on:
+      - backend
+    environment:
+      - NODE_ENV=production
+      - API_URL=http://backend:3001
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - shinai-network
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # バックエンドAPI
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+      args:
+        NODE_ENV: production
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - HOST=0.0.0.0
+      
+      # データベース
+      - MONGODB_URI=mongodb://mongodb_user:${MONGO_PASSWORD}@mongodb:27017/shinai_secure?authSource=admin
+      - REDIS_URL=redis://redis:6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      
+      # セキュリティ
+      - JWT_SECRET=${JWT_SECRET}
+      - SESSION_SECRET=${SESSION_SECRET}
+      - SESSION_CRYPTO_SECRET=${SESSION_CRYPTO_SECRET}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - COOKIE_SECRET=${COOKIE_SECRET}
+      
+      # メール・通知
+      - EMAIL_HOST=${EMAIL_HOST}
+      - EMAIL_PORT=${EMAIL_PORT}
+      - EMAIL_USER=${EMAIL_USER}
+      - EMAIL_PASS=${EMAIL_PASS}
+      - ALERT_WEBHOOK=${ALERT_WEBHOOK}
+      
+      # その他
+      - ALLOWED_ORIGINS=https://shinai.co.jp,https://www.shinai.co.jp
+      
+    depends_on:
+      - mongodb
+      - redis
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - shinai-network
+    volumes:
+      - backend_logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+
+  # MongoDB（暗号化・レプリケーション対応）
+  mongodb:
+    image: mongo:6.0
+    ports:
+      - "127.0.0.1:27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_ROOT_PASSWORD}
+      - MONGO_INITDB_DATABASE=shinai_secure
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+      - ./mongodb/init.js:/docker-entrypoint-initdb.d/init.js:ro
+      - ./mongodb/mongod.conf:/etc/mongod.conf:ro
+      - mongodb_logs:/var/log/mongodb
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - shinai-network
+    command: >
+      mongod 
+      --auth 
+      --storageEngine wiredTiger 
+      --wiredTigerCollectionBlockCompressor snappy 
+      --wiredTigerIndexPrefixCompression true
+      --journalCommitInterval 100
+      --syncdelay 60
+      --wiredTigerCacheSizeGB 0.25
+      --config /etc/mongod.conf
+    healthcheck:
+      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+
+  # Redis（セッション・キャッシュ・キュー）
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "127.0.0.1:6379:6379"
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    volumes:
+      - redis_data:/data
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+      - redis_logs:/var/log/redis
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - shinai-network
+    command: >
+      redis-server /usr/local/etc/redis/redis.conf
+      --requirepass ${REDIS_PASSWORD}
+      --appendonly yes
+      --appendfsync everysec
+      --save 900 1
+      --save 300 10
+      --save 60 10000
+      --maxmemory 128mb
+      --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
+
+  # セキュリティ監視システム
+  security-monitor:
+    build:
+      context: ../security/monitoring
+      dockerfile: Dockerfile
+    environment:
+      - NODE_ENV=production
+      - MONGODB_URI=mongodb://mongodb_user:${MONGO_PASSWORD}@mongodb:27017/shinai_secure?authSource=admin
+      - REDIS_URL=redis://redis:6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - ALERT_WEBHOOK=${SECURITY_ALERT_WEBHOOK}
+      - ALERT_EMAIL=${SECURITY_ALERT_EMAIL}
+      - LOG_LEVEL=info
+    depends_on:
+      - mongodb
+      - redis
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - shinai-network
+    volumes:
+      - nginx_logs:/var/log/nginx:ro
+      - backend_logs:/var/log/backend:ro
+      - security_logs:/var/log/security
+    healthcheck:
+      test: ["CMD", "node", "-e", "process.exit(0)"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
+
+  # ログ集約システム（Fluentd）
+  log-aggregator:
+    image: fluent/fluentd:v1.16-1
+    ports:
+      - "127.0.0.1:24224:24224"
+    volumes:
+      - ./fluentd/fluent.conf:/fluentd/etc/fluent.conf:ro
+      - nginx_logs:/var/log/nginx:ro
+      - backend_logs:/var/log/backend:ro
+      - security_logs:/var/log/security:ro
+      - fluentd_logs:/fluentd/log
+    restart: unless-stopped
+    networks:
+      - shinai-network
+    depends_on:
+      - mongodb
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
+
+  # メトリクス・監視（Prometheus）
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "127.0.0.1:9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=7d'
+      - '--web.enable-lifecycle'
+    restart: unless-stopped
+    networks:
+      - shinai-network
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
+
+  # バックアップシステム
+  backup:
+    build:
+      context: ./backup
+      dockerfile: Dockerfile
+    environment:
+      - MONGODB_URI=mongodb://admin:${MONGO_ROOT_PASSWORD}@mongodb:27017/admin
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - BACKUP_SCHEDULE=0 2 * * *  # 毎日2時
+      - BACKUP_RETENTION=7  # 7日間保持
+      - S3_BUCKET=${BACKUP_S3_BUCKET}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+    volumes:
+      - mongodb_data:/data/mongodb:ro
+      - redis_data:/data/redis:ro
+      - backup_storage:/backup
+    depends_on:
+      - mongodb
+      - redis
+    restart: unless-stopped
+    networks:
+      - shinai-network
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
+
+# ボリューム定義
+volumes:
+  # データベース
+  mongodb_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/shinai/data/mongodb
+  mongodb_config:
+    driver: local
+  redis_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/shinai/data/redis
+
+  # ログ
+  nginx_logs:
+    driver: local
+  backend_logs:
+    driver: local
+  security_logs:
+    driver: local
+  mongodb_logs:
+    driver: local
+  redis_logs:
+    driver: local
+  fluentd_logs:
+    driver: local
+
+  # 監視・バックアップ
+  prometheus_data:
+    driver: local
+  backup_storage:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/shinai/backup
+
+# ネットワーク定義
+networks:
+  shinai-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+          gateway: 172.20.0.1
+    driver_opts:
+      com.docker.network.bridge.name: shinai-bridge
+      com.docker.network.bridge.enable_icc: "false"
+      com.docker.network.bridge.enable_ip_masquerade: "true"
+
+# シークレット管理（Docker Swarm使用時）
+secrets:
+  jwt_secret:
+    file: ./secrets/jwt_secret.txt
+  session_secret:
+    file: ./secrets/session_secret.txt
+  mongo_root_password:
+    file: ./secrets/mongo_root_password.txt
+  redis_password:
+    file: ./secrets/redis_password.txt
+
+# 設定管理
+configs:
+  nginx_config:
+    file: ./nginx.conf
+  mongodb_config:
+    file: ./mongodb/mongod.conf
+  redis_config:
+    file: ./redis/redis.conf

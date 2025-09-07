@@ -1,0 +1,168 @@
+# Prometheus Configuration for ShinAI Secure System
+# Constitutional AI準拠・masa様開発ルール完全遵守
+# システム監視・メトリクス収集設定
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'shinai-security-monitor'
+    environment: 'production'
+    constitutional_ai_compliant: 'true'
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          # - alertmanager:9093
+
+# Load rules once and periodically evaluate them according to the global 'evaluation_interval'.
+rule_files:
+  # - "first_rules.yml"
+  # - "second_rules.yml"
+
+# A scrape configuration containing exactly one endpoint to scrape:
+scrape_configs:
+  # Prometheus自体の監視
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    scrape_interval: 30s
+    metrics_path: /metrics
+    
+  # ShinAI フロントエンド監視
+  - job_name: 'shinai-frontend'
+    static_configs:
+      - targets: ['frontend:80']
+    scrape_interval: 30s
+    metrics_path: /metrics
+    scrape_timeout: 10s
+    honor_labels: false
+    
+  # ShinAI バックエンドAPI監視
+  - job_name: 'shinai-backend-api'
+    static_configs:
+      - targets: ['backend:3001']
+    scrape_interval: 15s
+    metrics_path: /metrics
+    scrape_timeout: 10s
+    honor_labels: false
+    
+  # セキュリティ監視システム
+  - job_name: 'shinai-security-monitor'
+    static_configs:
+      - targets: ['security-monitor:3002']
+    scrape_interval: 10s  # セキュリティは高頻度監視
+    metrics_path: /security/stats
+    scrape_timeout: 5s
+    honor_labels: false
+    
+  # MongoDB監視（mongodb_exporterが必要）
+  - job_name: 'mongodb'
+    static_configs:
+      - targets: ['mongodb:27017']
+    scrape_interval: 30s
+    metrics_path: /metrics
+    scrape_timeout: 10s
+    params:
+      collect[]:
+        - database
+        - collection
+        - topmetrics
+        - indexstats
+        
+  # Redis監視（redis_exporterが必要）
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis:6379']
+    scrape_interval: 30s
+    metrics_path: /metrics
+    scrape_timeout: 10s
+    
+  # nginx監視（nginx-prometheus-exporterが必要）
+  - job_name: 'nginx'
+    static_configs:
+      - targets: ['frontend:9113']
+    scrape_interval: 30s
+    metrics_path: /metrics
+    scrape_timeout: 10s
+    
+  # Node Exporter（システムメトリクス）
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    scrape_interval: 30s
+    metrics_path: /metrics
+    scrape_timeout: 10s
+    
+  # Docker監視（cAdvisor）
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+    scrape_interval: 30s
+    metrics_path: /metrics
+    scrape_timeout: 10s
+    
+  # Constitutional AI準拠監視（カスタムエクスポーター）
+  - job_name: 'constitutional-ai-compliance'
+    static_configs:
+      - targets: ['security-monitor:3002']
+    scrape_interval: 10s  # Constitutional AI違反は即座検知
+    metrics_path: /security/compliance/metrics
+    scrape_timeout: 5s
+    honor_labels: false
+    
+  # セキュリティアラート監視
+  - job_name: 'security-alerts'
+    static_configs:
+      - targets: ['security-monitor:3002']
+    scrape_interval: 5s   # アラートは最高頻度監視
+    metrics_path: /security/alerts/metrics
+    scrape_timeout: 3s
+    honor_labels: false
+
+# 追加設定
+
+# メトリクス保持期間設定
+storage:
+  tsdb:
+    retention.time: 7d
+    retention.size: 1GB
+
+# ログ設定
+log:
+  level: info
+  format: json
+
+# Web設定
+web:
+  console:
+    libraries: /etc/prometheus/console_libraries
+    templates: /etc/prometheus/consoles
+  enable-lifecycle: true
+  enable-admin-api: false
+  page-title: "ShinAI Security Monitoring - Prometheus"
+  max-connections: 512
+  read-timeout: 30s
+
+# 外部ラベル（アラートで使用）
+external_labels:
+  cluster: 'shinai-production'
+  replica: 'prometheus-1'
+  region: 'asia-east'
+  constitutional_ai_version: '2.0.0'
+
+# フェデレーション設定（将来の拡張用）
+# - job_name: 'federate'
+#   scrape_interval: 15s
+#   honor_labels: true
+#   metrics_path: '/federate'
+#   params:
+#     'match[]':
+#       - '{job="prometheus"}'
+#       - '{__name__=~"job:.*"}'
+#   static_configs:
+#     - targets:
+#       - 'prometheus-1:9090'
+#       - 'prometheus-2:9090'
